@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Emotion Recognition</title>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      text-align: center;
+    }
+    video, canvas, img {
+      border: 2px solid black;
+    }
+    #wrap, #imageWrap {
+      position: relative;
+      width: 320px;
+      margin: auto;
+    }
+    #overlay, #imageOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #result, #imageResult {
+      font-size: 22px;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Emotion Recognition</h1>
+  <h2>Webcam Detection</h2>
+  <button id="startBtn">Start Webcam</button>
+  <div id="wrap">
+    <video id="video" width="320" height="240" autoplay muted></video>
+    <canvas id="overlay" width="320" height="240"></canvas>
+  </div>
+  <div id="result">—</div>
+  <h2>Upload Photo Detection</h2>
+  <input type="file" id="upload" accept="image/*">
+  <div id="imageWrap">
+    <img id="uploadedImage" width="320" height="240" style="display: none;">
+    <canvas id="imageOverlay" width="320" height="240" style="display: none;"></canvas>
+  </div>
+  <div id="imageResult">—</div>
+  <script>
+    const FACE_MODEL_PATH = './models';
+
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+
+    const uploadedImage = document.getElementById('uploadedImage');
+    const imageCanvas = document.getElementById('imageOverlay');
+    const imageCtx = imageCanvas.getContext('2d');
+
+    /* ================= LOAD MODELS ================= */
+    async function loadModels() {
+      console.log('Loading face-api models...');
+      await faceapi.nets.ssdMobilenetv1.loadFromUri(FACE_MODEL_PATH);
+      await faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_PATH);
+      await faceapi.nets.faceExpressionNet.loadFromUri(FACE_MODEL_PATH); // Add this for emotions
+      console.log('ALL MODELS LOADED');
+    }
+
+    /* ================= CAMERA ================= */
+    async function startCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      return new Promise(r => video.onloadedmetadata = r);
+    }
+
+    /* ================= WEBCAM LOOP ================= */
+    async function detectLoop() {
+      const detection = await faceapi
+        .detectSingleFace(video)
+        .withFaceLandmarks()
+        .withFaceExpressions(); // Add this for emotions
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!detection) {
+        document.getElementById('result').innerText = 'No face detected';
+        requestAnimationFrame(detectLoop);
+        return;
+      }
+
+      const displaySize = { width: video.clientWidth, height: video.clientHeight };
+      const resizedDetection = faceapi.resizeResults(detection, displaySize);
+
+      const b = resizedDetection.detection.box;
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(b.x, b.y, b.width, b.height);
+
+      // Get dominant emotion
+      const expressions = resizedDetection.expressions;
+      const emotion = Object.keys(expressions).reduce((max, key) => expressions[max] > expressions[key] ? max : key, Object.keys(expressions)[0]);
+
+      document.getElementById('result').innerText = 'Emotion: ' + emotion;
+
+      requestAnimationFrame(detectLoop);
+    }
+
+    /* ================= UPLOAD IMAGE HANDLER ================= */
+    document.getElementById('upload').addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      uploadedImage.src = URL.createObjectURL(file);
+      uploadedImage.style.display = 'block';
+      imageCanvas.style.display = 'block';
+
+      await new Promise(r => uploadedImage.onload = r);
+
+      const detection = await faceapi
+        .detectSingleFace(uploadedImage)
+        .withFaceLandmarks()
+        .withFaceExpressions(); // Add this for emotions
+
+      imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+
+      if (!detection) {
+        document.getElementById('imageResult').innerText = 'No face detected';
+        return;
+      }
+
+      const displaySize = { width: uploadedImage.clientWidth, height: uploadedImage.clientHeight };
+      const resizedDetection = faceapi.resizeResults(detection, displaySize);
+
+      const b = resizedDetection.detection.box;
+      imageCtx.strokeStyle = 'red';
+      imageCtx.lineWidth = 2;
+      imageCtx.strokeRect(b.x, b.y, b.width, b.height);
+
+      // Get dominant emotion
+      const expressions = resizedDetection.expressions;
+      const emotion = Object.keys(expressions).reduce((max, key) => expressions[max] > expressions[key] ? max : key, Object.keys(expressions)[0]);
+
+      document.getElementById('imageResult').innerText = 'Emotion: ' + emotion;
+    });
+
+    /* ================= START ================= */
+    document.getElementById('startBtn').onclick = async () => {
+      try {
+        await loadModels();
+        await startCamera();
+        detectLoop();
+      } catch (e) {
+        console.error(e);
+        alert('Error loading models — check console');
+      }
+    };
+  </script>
+</body>
+</html>
