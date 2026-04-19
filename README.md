@@ -1,23 +1,6 @@
 # Emotion Recognition Web — FER-2013 Mobile FESNet
 
-> Final Project for **Manajemen Data dan Informasi** (Data & Information Management)  
-> Program Studi Manajemen Informatika, Fakultas Vokasi — Universitas Negeri Surabaya 2025
-
 A real-time facial emotion recognition system built with a deep learning pipeline (IR-SE50 backbone + MLP classifier) and deployed as a browser-based web application using TensorFlow.js and face-api.js.
-
----
-
-## Team
-
-**Kelompok 5 — MI 2022B**
-
-| Name | NIM |
-|---|---|
-| Mellani Silvia Prameswari | 22091397038 |
-| Ibnu Salim H. | 22091397043 |
-| Dara Lembayung Kinasih | 22091397050 |
-| Aviana Candra A. N | 22091397059 |
-| Putri Rizki Alifia | 22091397073 |
 
 ---
 
